@@ -1,11 +1,4 @@
-"""
-System Health Monitor
-=====================
-Tracks CPU, RAM, and Battery usage in real time.
-Alerts when levels are too high.
 
-Run with:  python monitor.py
-"""
 
 import psutil
 import time
@@ -13,17 +6,17 @@ import os
 import platform
 from datetime import datetime
 
-# ─── Alert Thresholds ────────────────────────────────────────────────────────
+#  Alert Thresholds 
 CPU_ALERT    = 80   # %
 RAM_ALERT    = 80   # %
 BATTERY_LOW  = 20   # %  (alert when battery is low AND not charging)
 
-# ─── History for sparkline (last N readings) ─────────────────────────────────
+# History for sparkline
 HISTORY_LEN = 20
 cpu_history = []
 ram_history = []
 
-# ─── ANSI colour helpers ──────────────────────────────────────────────────────
+# ANSI colour helpers
 RESET  = "\033[0m"
 BOLD   = "\033[1m"
 DIM    = "\033[2m"
@@ -37,7 +30,7 @@ def bg(text, r, g, b):
 def clear():
     os.system("cls" if platform.system() == "Windows" else "clear")
 
-# ─── Bar renderer ─────────────────────────────────────────────────────────────
+# Bar renderer
 def bar(value, width=30):
     """Return a coloured progress bar string."""
     filled = int(value / 100 * width)
@@ -53,7 +46,7 @@ def bar(value, width=30):
     bar_str = colour("█" * filled, r, g, b) + DIM + "░" * empty + RESET
     return f"[{bar_str}]"
 
-# ─── Sparkline renderer ───────────────────────────────────────────────────────
+# Sparkline renderer
 SPARK_CHARS = " ▁▂▃▄▅▆▇█"
 
 def sparkline(history):
@@ -66,7 +59,7 @@ def sparkline(history):
         chars += SPARK_CHARS[idx]
     return colour(chars, 120, 180, 255)
 
-# ─── Data collectors ──────────────────────────────────────────────────────────
+# Data collectors
 def get_cpu():
     per_core = psutil.cpu_percent(interval=None, percpu=True)
     overall  = psutil.cpu_percent(interval=0.5)
@@ -103,7 +96,7 @@ def get_top_processes(n=5):
     procs.sort(key=lambda x: x["cpu_percent"] or 0, reverse=True)
     return procs[:n]
 
-# ─── Alert system ─────────────────────────────────────────────────────────────
+# Alert system
 alerts = []
 
 def check_alerts(cpu, ram, batt_pct, batt_plugged):
@@ -116,7 +109,7 @@ def check_alerts(cpu, ram, batt_pct, batt_plugged):
     if batt_pct is not None and batt_pct <= BATTERY_LOW and not batt_plugged:
         alerts.append(("🔋 BATTERY LOW", f"Battery at {batt_pct:.0f}% — please plug in"))
 
-# ─── Dashboard renderer ───────────────────────────────────────────────────────
+# Dashboard renderer
 TITLE = r"""
   ███████╗██╗   ██╗███████╗    ██╗  ██╗███████╗ █████╗ ██╗  ████████╗██╗  ██╗
   ██╔════╝╚██╗ ██╔╝██╔════╝    ██║  ██║██╔════╝██╔══██╗██║  ╚══██╔══╝██║  ██║
@@ -143,7 +136,7 @@ def render(cpu, per_core, freq_str, ram, used_gb, total_gb,
     print(colour(f"  System Health Monitor  •  {now}  •  Press Ctrl+C to quit", 100, 140, 200))
     print()
 
-    # ── CPU ──────────────────────────────────────────────────────────────────
+    # CPU
     print(divider("CPU"))
     status = colour("⚠  HIGH", 255, 80, 80) if cpu >= CPU_ALERT else colour("✔  OK", 80, 220, 140)
     print(f"  {BOLD}Overall  {RESET}{bar(cpu)} {colour(f'{cpu:5.1f}%', 255,255,255)}  {status}  {DIM}{freq_str}{RESET}")
@@ -162,14 +155,14 @@ def render(cpu, per_core, freq_str, ram, used_gb, total_gb,
         print(f"{left}   {right}")
     print()
 
-    # ── RAM ──────────────────────────────────────────────────────────────────
+    # RAM
     print(divider("MEMORY (RAM)"))
     status = colour("⚠  HIGH", 255, 80, 80) if ram >= RAM_ALERT else colour("✔  OK", 80, 220, 140)
     print(f"  {BOLD}RAM      {RESET}{bar(ram)} {colour(f'{ram:5.1f}%', 255,255,255)}  {status}")
     print(f"  {DIM}Used: {used_gb:.2f} GB / {total_gb:.2f} GB   Trend: {sparkline(ram_history)}{RESET}")
     print()
 
-    # ── Battery ───────────────────────────────────────────────────────────────
+    # Battery
     print(divider("BATTERY"))
     if batt_pct is None:
         print(f"  {DIM}No battery detected (desktop PC){RESET}")
@@ -185,7 +178,7 @@ def render(cpu, per_core, freq_str, ram, used_gb, total_gb,
         print(f"  {DIM}{plug_icon}  {batt_time}{RESET}")
     print()
 
-    # ── Top Processes ─────────────────────────────────────────────────────────
+    # Top Processes 
     print(divider("TOP PROCESSES BY CPU"))
     print(f"  {DIM}{'PID':>6}  {'NAME':<25}  {'CPU%':>6}  {'MEM%':>6}{RESET}")
     for p in top_procs:
@@ -195,7 +188,7 @@ def render(cpu, per_core, freq_str, ram, used_gb, total_gb,
         print(f"  {p['pid']:>6}  {name:<25}  {cpu_col}  {mem_col}")
     print()
 
-    # ── Alerts ────────────────────────────────────────────────────────────────
+    # Alerts
     if alerts:
         print(divider("⚠  ALERTS"))
         for title, msg in alerts:
@@ -208,7 +201,7 @@ def render(cpu, per_core, freq_str, ram, used_gb, total_gb,
 
     print(colour("  Refreshing every 2 seconds  •  Ctrl+C to exit", 60, 80, 120))
 
-# ─── Main loop ────────────────────────────────────────────────────────────────
+# Main loop 
 def main():
     print("Starting System Health Monitor…  (first read may take a moment)")
     # Warm up psutil's CPU counter (first call always returns 0)
